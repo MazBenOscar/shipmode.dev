@@ -61,6 +61,7 @@ export const COLORS = {
   secondary: chalk.magenta,
   success: chalk.green,
   warning: chalk.yellow,
+  yellow: chalk.yellow,
   error: chalk.red,
   muted: chalk.gray,
   gray: chalk.gray,
