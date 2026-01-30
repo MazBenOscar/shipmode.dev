@@ -141,6 +141,12 @@ ${profile.packageManager === 'pnpm' ? 'pnpm dev' : profile.packageManager === 'y
 
   // Generate crew agents
   await generateCrewAgents(shipmodeDir, profile);
+  
+  // Generate basic commands
+  await generateBasicCommands(shipmodeDir, profile);
+  
+  // Generate basic hooks
+  await generateBasicHooks(shipmodeDir);
 }
 
 function generateArchitectureSection(profile: CodebaseProfile): string {
@@ -299,4 +305,67 @@ ${agent.skills.map(s => `- ${s}`).join('\n') || '- General development'}
 
     await fs.writeFile(path.join(shipmodeDir, 'crew', `${agent.name}.md`), agentContent);
   }
+}
+
+async function generateBasicCommands(shipmodeDir: string, profile: CodebaseProfile): Promise<void> {
+  const commandsDir = path.join(shipmodeDir, 'commands');
+  await fs.mkdir(commandsDir, { recursive: true });
+  
+  const packageCmd = profile.packageManager === 'pnpm' ? 'pnpm' : profile.packageManager === 'yarn' ? 'yarn' : 'npm run';
+  
+  const commandsContent = `# Custom Commands
+
+## /dev
+Start development server
+
+### Steps
+1. Run \`${packageCmd} dev\`
+2. Wait for server to start
+3. Open browser to http://localhost:3000
+
+## /build
+Build the application
+
+### Steps
+1. Run \`${packageCmd} build\`
+2. Check for TypeScript errors
+3. Verify output
+
+${profile.testing ? `## /test
+Run tests
+
+### Steps
+1. Run \`${packageCmd} test\`
+2. Check for failing tests
+` : ''}
+
+## /lint
+Lint and format code
+
+### Steps
+1. Run \`${packageCmd} lint\`
+2. Auto-fix issues where possible
+`;
+
+  await fs.writeFile(path.join(commandsDir, 'index.md'), commandsContent);
+}
+
+async function generateBasicHooks(shipmodeDir: string): Promise<void> {
+  const hooksDir = path.join(shipmodeDir, 'hooks');
+  await fs.mkdir(hooksDir, { recursive: true });
+  
+  const hooks = [
+    {
+      trigger: 'PreToolUse',
+      tool: 'Bash',
+      script: `echo "[ShipMode] Executing: $1"`,
+    },
+    {
+      trigger: 'PreToolUse',
+      tool: 'Write',
+      script: `echo "[ShipMode] Writing file: $1"`,
+    },
+  ];
+  
+  await fs.writeFile(path.join(hooksDir, 'hooks.json'), JSON.stringify(hooks, null, 2));
 }
