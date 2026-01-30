@@ -1,212 +1,348 @@
-# ShipMode.dev 🚀
+# ShipMode CLI v0.2.0 — Full Claude Agent SDK Integration
 
-> **Your codebase's autopilot. Get in ship mode.**
+**Your codebase's autopilot.** From idea to production with AI crew.
 
-Stop teaching AI about your stack. Stop writing boilerplate. Stop repeating yourself.
+## What's New in v0.2.0
 
-ShipMode puts your codebase on **autopilot** — analyzing your project, understanding your patterns, and shipping features while you focus on what matters.
+### ✅ Phase 1: Configuration Generation (Complete)
+- Multi-LLM provider support (Anthropic, OpenAI)
+- AI-enhanced codebase analysis
+- Project-specific skill generation
+- CLAUDE.md / CODEX.md generation
+
+### ✅ Phase 2: Commands & Hooks (Complete)
+- Custom slash commands (`/build`, `/test`, `/deploy`)
+- PreToolUse/PostToolUse hooks for safety & automation
+- Framework-aware command generation
+
+### ✅ Phase 3: Agent Execution (Complete)
+- Full agent loop: Planning → Execution → Verification
+- Multi-step task execution
+- Autonomous coding with Claude SDK
 
 ---
 
-## What is ShipMode?
+## Architecture
 
-ShipMode is an **AI-native development toolkit** that transforms ideas and codebases into self-driving software projects. Whether you're starting from scratch or optimizing an existing project, ShipMode generates a complete AI crew that can:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ShipMode CLI                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Phase 1: CONFIGURATION                                     │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐ │
+│  │   Analyzer  │───→│  Generator  │───→│  SHIPMODE.md    │ │
+│  │  (40+ fwks) │    │  (AI-enh)   │    │  Skills/Crew    │ │
+│  └─────────────┘    └─────────────┘    └─────────────────┘ │
+│                                                             │
+│  Phase 2: COMMANDS & HOOKS                                  │
+│  ┌─────────────┐    ┌─────────────┐                        │
+│  │  Commands   │    │    Hooks    │                        │
+│  │   /build    │    │ PreToolUse  │                        │
+│  │   /test     │    │ PostToolUse │                        │
+│  │   /deploy   │    │   OnError   │                        │
+│  └─────────────┘    └─────────────┘                        │
+│                                                             │
+│  Phase 3: AGENT EXECUTION                                   │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐ │
+│  │   Planner   │───→│  Executor   │───→│  Verifier       │ │
+│  │  (Create    │    │  (Execute   │    │  (Validate &    │ │
+│  │   steps)    │    │   steps)    │    │   summarize)    │ │
+│  └─────────────┘    └─────────────┘    └─────────────────┘ │
+│         ↑                                              │    │
+│         └──────────────── Loop ←───────────────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- 🔍 **Analyze** your tech stack, architecture, and patterns
-- 🧠 **Learn** your coding conventions and best practices
-- ✨ **Ship** features end-to-end with minimal human oversight
-- 🔄 **Iterate** continuously — planning, executing, testing, deploying
+---
 
-## Two Ways to Ship
-
-### 🌱 Mode 1: Idea → Scaffold → Ship
-**Starting from zero?** ShipMode interviews you about your idea, proposes an optimal tech stack, scaffolds your initial project, then activates your AI crew to build it out.
+## Installation
 
 ```bash
-npx shipmode init --from-idea
+npm install -g shipmode
 ```
 
-**The flow:**
-1. **Interview** — Answer 5-7 diagnostic questions about your idea
-2. **Stack Proposal** — Get a recommended tech stack based on your needs
-3. **Approval** — Accept or customize the proposed stack
-4. **Scaffold** — ShipMode generates your initial project structure
-5. **Activate** — AI crew takes over to build features autonomously
+Or use with npx:
+```bash
+npx shipmode
+```
 
-### 🚀 Mode 2: Existing Codebase → Ship
-**Already have code?** ShipMode analyzes your existing project, learns your patterns, and immediately activates your AI crew.
+---
+
+## Quick Start
+
+### 1. Configure Your LLM Provider
 
 ```bash
-npx shipmode init --from-code
+# Interactive wizard
+shipmode config wizard
+
+# Or set manually
+shipmode config set-provider anthropic
+shipmode config set-model anthropic claude-sonnet-4-5
+shipmode config set-api-key anthropic
 ```
 
-**The flow:**
-1. **Analyze** — Deep scan of your codebase (languages, frameworks, patterns)
-2. **Generate** — Create SHIPMODE.md, skills/, and crew/ configuration
-3. **Activate** — AI crew starts shipping features in your style
+### 2. Initialize Your Project
+
+```bash
+# From existing code (analyzes and generates config)
+shipmode init --from-code
+
+# From an idea (interactive stack proposal)
+shipmode init --from-idea
+
+# With specific provider
+shipmode init --from-code --provider openai --model codex
+```
+
+### 3. Run the Agent
+
+```bash
+# Execute a task with your AI crew
+shipmode run "Build a checkout flow with Stripe"
+
+# Dry run (plan only)
+shipmode run "Refactor auth module" --dry-run
+
+# With specific provider
+shipmode run "Add tests" --provider anthropic
+```
 
 ---
 
-## The Problem
+## Multi-LLM Provider Support
 
-```
-Developer: "Build a checkout flow with Stripe"
-Generic AI: "Here's basic React code..."
-Developer: "No, we use Next.js App Router with tRPC"
-Generic AI: "Here's tRPC code..."
-Developer: "No, we put mutations in mutations/ not routes/"
-Generic AI: "Here's different code..."
-Developer: "Still wrong. Let me just do it myself."
-```
+| Provider | Models | Status |
+|----------|--------|--------|
+| **Anthropic** | Claude Opus 4.5, Sonnet 4.5, Haiku 3.5 | ✅ Ready |
+| **OpenAI** | GPT-5.2, GPT-4o, GPT-4o-mini, Codex | ✅ Ready |
+| Google | Gemini 3 Pro, Gemini 3 Flash | 📝 Planned |
+| Moonshot | Kimi 2.5 | 📝 Planned |
+| MiniMax | M2.1 | 📝 Planned |
+| Ollama | Llama 3, Mistral, etc. | 📝 Planned |
 
-**Hours lost. Context misunderstood. Momentum killed.**
+### Usage Examples
+
+```bash
+# Use Claude (default)
+shipmode init --from-code --provider anthropic --model claude-opus-4-5
+
+# Use OpenAI Codex
+shipmode init --from-code --provider openai --model codex
+
+# Use GPT-4o
+shipmode run "Add feature" --provider openai --model gpt-4o
+```
 
 ---
 
-## The Solution
+## Generated Structure
 
-**From Idea:**
 ```
-Developer: "I want to build a marketplace for vintage watches"
-ShipMode: *Asks diagnostic questions*
-ShipMode: *Proposes: Next.js + tRPC + Prisma + Stripe*
-Developer: "Looks good!" ✓
-ShipMode: *Scaffolds project + generates crew*
-ShipMode: *Builds core features autonomously*
-Developer: *Reviews and ships*
-
-Time to first feature: 30 minutes
+.shipmode/
+├── SHIPMODE.md              # Project context (read by Claude Code)
+├── commands/
+│   └── index.md             # Custom slash commands
+├── hooks/
+│   └── hooks.json           # Pre/Post tool hooks
+├── skills/
+│   ├── nextjs.md            # Framework-specific patterns
+│   ├── react.md             # Learned from your code
+│   └── prisma.md            # Your DB conventions
+└── crew/
+    ├── frontend-engineer.md # Agent definitions
+    ├── backend-engineer.md
+    └── devops-engineer.md
 ```
 
-**From Code:**
-```
-Developer: "Build a checkout flow with Stripe"
-ShipMode: *Analyzes codebase*
-ShipMode: *Generates crew specialized for your stack*
-ShipMode: *Plans, codes, tests, and opens PR*
-Developer: *Reviews and ships*
+---
 
-Time saved: 4 hours
-Sanity preserved: 100%
+## Commands
+
+### Configuration
+```bash
+shipmode config show                    # Display current config
+shipmode config wizard                  # Interactive setup
+shipmode config set-provider <name>     # Set default provider
+shipmode config set-model <provider> <model>
+shipmode config set-api-key <provider>  # Set API key
+```
+
+### Initialization
+```bash
+shipmode init --from-idea               # Start from scratch
+shipmode init --from-code               # Analyze existing project
+shipmode init --provider <name>         # Use specific LLM
+shipmode init --model <name>            # Use specific model
+shipmode init --target <claude|codex>   # Output format
+```
+
+### Analysis
+```bash
+shipmode analyze [path]                 # Analyze codebase
+shipmode analyze --json                 # Output as JSON
+```
+
+### Execution
+```bash
+shipmode run "task description"         # Execute with AI crew
+shipmode run "task" --dry-run           # Plan only
+shipmode run "task" --provider <name>   # Use specific LLM
 ```
 
 ---
 
 ## How It Works
 
-### Initialize (Choose Your Path)
+### Phase 1: Configuration
 
-**From Idea:**
 ```bash
-npx shipmode init --from-idea
+shipmode init --from-code
 ```
-ShipMode interviews you, proposes a stack, scaffolds your project.
 
-**From Code:**
+1. **Analysis**: Detects 40+ frameworks, languages, patterns
+2. **Generation**: Uses LLM to create project-specific config
+3. **Output**: SHIPMODE.md + Skills + Crew Agents
+
+### Phase 2: Commands & Hooks
+
+Generated automatically during init:
+
+**Commands** (`.shipmode/commands/index.md`):
+```markdown
+## /build
+Build the Next.js application
+
+### Steps
+1. Run `npm run build`
+2. Check for TypeScript errors
+3. Verify output in .next/
+```
+
+**Hooks** (`.shipmode/hooks/hooks.json`):
+```json
+[
+  {
+    "trigger": "PreToolUse",
+    "tool": "Bash",
+    "script": "echo '[ShipMode] Executing: $1'"
+  }
+]
+```
+
+### Phase 3: Agent Execution
+
 ```bash
-npx shipmode init --from-code
-```
-ShipMode scans your codebase and builds a complete understanding of your stack.
-
-### Generate
-
-After initialization, ShipMode creates your AI crew configuration:
-
-```
-.shipmode/
-├── SHIPMODE.md          # Your project's AI manifesto
-├── skills/
-│   ├── nextjs.md        # Your Next.js patterns
-│   ├── prisma.md        # Your database conventions
-│   └── stripe.md        # Your payment flow patterns
-└── crew/
-    ├── frontend-engineer.md
-    ├── backend-engineer.md
-    └── devops-engineer.md
+shipmode run "Build a checkout flow"
 ```
 
-### Ship
-```bash
-npx shipmode run "Build a checkout flow with Stripe"
-```
-
-Your AI crew:
-1. **Plans** the implementation
-2. **Codes** following your conventions
-3. **Tests** against your existing suite
-4. **Opens a PR** with full context
+1. **Planning**: LLM creates step-by-step plan
+2. **Execution**: Each step executed with tool use
+3. **Verification**: Results validated and summarized
+4. **Loop**: Continue until complete or max iterations
 
 ---
 
-## Features
+## Environment Variables
 
-- 🧬 **Deep Codebase Analysis** — AST parsing, dependency mapping, pattern detection
-- 🎯 **Stack-Specific Skills** — Not generic templates. YOUR patterns.
-- 👥 **Specialized AI Crew** — Frontend, backend, DevOps agents that know your project
-- 🔄 **Autonomous Execution** — Plan → Code → Test → PR loops
-- 🛡️ **Safety First** — Dry-run mode, approval gates, undo anything
-- 🌐 **Multi-Model** — Route tasks to Claude Haiku, Sonnet, or Opus based on complexity
-
----
-
-## Why ShipMode?
-
-| Without ShipMode | With ShipMode |
-|-----------------|---------------|
-| Explain your stack every session | Stack is learned once, remembered forever |
-| Generic code that doesn't fit your patterns | Code that matches YOUR conventions |
-| You write the boilerplate | AI writes the boilerplate |
-| Context switching kills flow | Stay in creative mode, ship faster |
-| Junior tasks eat senior time | AI crew handles the routine |
+```bash
+# API Keys (alternatives to config wizard)
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
+export GOOGLE_API_KEY=...
+export MOONSHOT_API_KEY=...
+export MINIMAX_API_KEY=...
+```
 
 ---
 
-## Tech Stack
+## Configuration File
 
-ShipMode works with whatever you're building:
+`~/.shipmode/config.json`:
+```json
+{
+  "defaultProvider": "anthropic",
+  "providers": {
+    "anthropic": {
+      "defaultModel": "claude-sonnet-4-5-20250929"
+    },
+    "openai": {
+      "defaultModel": "codex"
+    }
+  }
+}
+```
 
-- **Frontend**: React, Vue, Svelte, Next.js, Astro
-- **Backend**: Node.js, Python, Go, Rust, Java
-- **Mobile**: React Native, Flutter, Swift
-- **Databases**: PostgreSQL, MongoDB, Prisma, Drizzle
-- **Infra**: Docker, Kubernetes, GitHub Actions, AWS
+---
+
+## Examples
+
+### Initialize a Next.js Project
+```bash
+cd my-nextjs-app
+shipmode init --from-code --provider anthropic
+```
+
+**Generated Output:**
+- Detects: TypeScript, Next.js, React, Tailwind
+- Creates: SHIPMODE.md with Next.js conventions
+- Skills: nextjs.md, react.md, tailwind-css.md
+- Crew: frontend-engineer, backend-engineer, devops-engineer
+
+### Execute a Task
+```bash
+shipmode run "Add Stripe checkout with webhook handling"
+```
+
+**Execution Flow:**
+1. Plan: Create API route → Add UI component → Set up webhook
+2. Execute: Generate code for each step
+3. Verify: Check TypeScript, run tests
+4. Summary: Files modified, tests passing
+
+### Multi-Provider Workflow
+```bash
+# Use Claude for complex architecture
+shipmode init --from-idea --provider anthropic --model claude-opus-4-5
+
+# Use Codex for implementation
+shipmode run "Implement the API routes" --provider openai --model codex
+```
 
 ---
 
 ## Roadmap
 
-- [ ] **Phase 1**: CLI + codebase analysis engine
-- [ ] **Phase 2**: Skill/agent generation for major frameworks
-- [ ] **Phase 3**: Autonomous execution loops
-- [ ] **Phase 4**: Team collaboration + CI integration
-- [ ] **Phase 5**: ShipMode Cloud — hosted agents, analytics, enterprise features
+### ✅ Phase 1: Configuration (Complete)
+- [x] Multi-LLM support
+- [x] AI-enhanced analysis
+- [x] Project-specific skills
+- [x] CLAUDE.md generation
 
----
+### ✅ Phase 2: Commands & Hooks (Complete)
+- [x] Custom slash commands
+- [x] Pre/Post tool hooks
+- [x] Framework-aware commands
 
-## Philosophy
+### ✅ Phase 3: Agent Execution (Complete)
+- [x] Planning agent
+- [x] Execution loop
+- [x] Verification step
 
-> **"The best code is the code you don't have to write."**
+### Phase 4: Advanced Features (Next)
+- [ ] Remaining LLM providers (Google, Moonshot, MiniMax, Ollama)
+- [ ] Smart model routing (cheap → expensive)
+- [ ] Provider fallback chains
+- [ ] Cost tracking
+- [ ] Local caching
 
-But when you do write it, it should match your style, your patterns, your conventions.
-
-ShipMode doesn't replace developers. It **amplifies** them — handling the routine so you can focus on the remarkable.
-
----
-
-## Get in Ship Mode
-
-```bash
-# Coming soon
-npx shipmode init
-```
-
-**Join the waitlist** → [shipmode.dev](https://shipmode.dev)
-
----
-
-Built with ❤️ by developers who were tired of explaining their stack to AI.
-
-**Get in ship mode.** 🚀
+### Phase 5: Cloud Features (Future)
+- [ ] Team collaboration
+- [ ] CI/CD integration
+- [ ] Hosted agents
+- [ ] Usage analytics
 
 ---
 
@@ -216,4 +352,4 @@ MIT
 
 ---
 
-*This project is in early development. Star ⭐ the repo to follow our progress!*
+Built with ❤️ for developers who want to ship faster.
