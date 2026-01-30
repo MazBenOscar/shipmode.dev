@@ -270,6 +270,32 @@
             color: var(--text-muted);
         }
 
+        /* Hero Image */
+        .hero-image {
+            max-width: 800px;
+            margin: 48px auto 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0, 240, 255, 0.15);
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Feature Images */
+        .feature-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
         /* Feature Cards */
         .features {
             padding: 80px 0;
@@ -429,6 +455,10 @@
                 </div>
                 <p class="trust-text">No spam. Unsubscribe anytime. Launching Q2 2025.</p>
             </form>
+
+            <div class="hero-image">
+                <img src="assets/images/hero-spaceship.png" alt="ShipMode - Retro-futuristic spaceship launching from code">
+            </div>
         </section>
 
         <section class="terminal">
@@ -459,7 +489,7 @@
 
         <section class="features" id="features">
             <div class="feature-card">
-                <div class="feature-icon">🌱</div>
+                <img src="assets/images/brain-neural.png" alt="Neural network brain" class="feature-image">
                 <h3>Idea → Ship</h3>
                 <p>Starting from scratch? Answer a few questions, get a proposed tech stack, and watch your AI crew scaffold and build your entire project.</p>
             </div>
@@ -469,7 +499,7 @@
                 <p>Already have code? ShipMode analyzes your existing project, learns your patterns, and activates an AI crew that writes code your way.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">👥</div>
+                <img src="assets/images/ai-crew.png" alt="AI crew working together" class="feature-image">
                 <h3>AI Crew</h3>
                 <p>Specialized agents for frontend, backend, DevOps — each knowing your conventions and ready to plan, code, test, and deploy.</p>
             </div>
