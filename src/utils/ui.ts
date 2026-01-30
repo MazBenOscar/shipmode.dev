@@ -65,5 +65,6 @@ export const COLORS = {
   error: chalk.red,
   muted: chalk.gray,
   gray: chalk.gray,
+  cyan: chalk.cyan,
   bold: chalk.bold,
 };
