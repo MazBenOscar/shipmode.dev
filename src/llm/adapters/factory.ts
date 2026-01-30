@@ -2,6 +2,10 @@ import type { LLMAdapter, AdapterConfig } from './base.js';
 import type { SupportedProvider } from '../types.js';
 import { AnthropicAdapter } from './anthropic.js';
 import { OpenAIAdapter } from './openai.js';
+import { GoogleAdapter } from './google.js';
+import { MoonshotAdapter } from './moonshot.js';
+import { MinimaxAdapter } from './minimax.js';
+import { OllamaAdapter } from './ollama.js';
 
 export class AdapterFactory {
   private static adapters = new Map<string, LLMAdapter>();
@@ -23,13 +27,17 @@ export class AdapterFactory {
         adapter = new OpenAIAdapter(config);
         break;
       case 'google':
-        throw new Error('Google adapter not yet implemented');
+        adapter = new GoogleAdapter(config);
+        break;
       case 'moonshot':
-        throw new Error('Moonshot adapter not yet implemented');
+        adapter = new MoonshotAdapter(config);
+        break;
       case 'minimax':
-        throw new Error('MiniMax adapter not yet implemented');
+        adapter = new MinimaxAdapter(config);
+        break;
       case 'ollama':
-        throw new Error('Ollama adapter not yet implemented');
+        adapter = new OllamaAdapter(config);
+        break;
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
