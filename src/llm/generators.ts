@@ -1,5 +1,6 @@
 import type { CodebaseProfile } from '../types/index.js';
 import type { LLMAdapter } from './adapters/base.js';
+import { CommandsGenerator } from './commands-generator.js';
 
 export interface GeneratedConfig {
   files: {
@@ -53,11 +54,29 @@ Generate a CLAUDE.md file:`;
       maxTokens: 2000,
     });
 
+    // Generate commands and hooks
+    const commandsGen = new CommandsGenerator(this.adapter);
+    const [commands, hooks] = await Promise.all([
+      commandsGen.generateCommands(profile),
+      commandsGen.generateHooks(profile),
+    ]);
+
+    const commandsContent = await commandsGen.writeCommandsToFile(commands);
+    const hooksContent = this.writeHooksToFile(hooks);
+
     return {
       files: [
         {
-          path: 'CLAUDE.md',
+          path: 'SHIPMODE.md',
           content: response.content,
+        },
+        {
+          path: 'commands.md',
+          content: commandsContent,
+        },
+        {
+          path: 'hooks.json',
+          content: JSON.stringify(hooks, null, 2),
         },
       ],
     };
@@ -223,6 +242,10 @@ ${profile.entryPoints.map(ep => `- ${ep}`).join('\n')}
 - Write tests for new features
 - Run linting before committing
 `;
+  }
+
+  private writeHooksToFile(hooks: import('./commands-generator.js').HookDefinition[]): string {
+    return JSON.stringify(hooks, null, 2);
   }
 }
 

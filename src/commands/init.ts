@@ -354,7 +354,17 @@ async function initFromCode(
         const path = await import('path');
         
         for (const file of generated.files) {
-          const filePath = path.default.join('.shipmode', file.path);
+          let filePath: string;
+          
+          // Place commands and hooks in appropriate locations
+          if (file.path === 'commands.md') {
+            filePath = path.default.join('.shipmode', 'commands', 'index.md');
+          } else if (file.path === 'hooks.json') {
+            filePath = path.default.join('.shipmode', 'hooks', 'hooks.json');
+          } else {
+            filePath = path.default.join('.shipmode', file.path);
+          }
+          
           await fs.default.mkdir(path.default.dirname(filePath), { recursive: true });
           await fs.default.writeFile(filePath, file.content);
         }
@@ -406,6 +416,8 @@ async function initFromCode(
     console.log(`  ${COLORS.gray('→')} .shipmode/${target === 'codex' ? 'CODEX.md' : 'SHIPMODE.md'}`);
     console.log(`  ${COLORS.gray('→')} .shipmode/skills/*.md (${profile.frameworks.length} skills)`);
     console.log(`  ${COLORS.gray('→')} .shipmode/crew/*.md (3 crew agents)`);
+    console.log(`  ${COLORS.gray('→')} .shipmode/commands/index.md (custom commands)`);
+    console.log(`  ${COLORS.gray('→')} .shipmode/hooks/hooks.json (automation hooks)`);
 
     showNextSteps([
       COLORS.bold('Review ') + COLORS.muted(`.shipmode/${target === 'codex' ? 'CODEX.md' : 'SHIPMODE.md'}`),
