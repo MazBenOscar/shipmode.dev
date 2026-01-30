@@ -10,12 +10,40 @@ ShipMode puts your codebase on **autopilot** — analyzing your project, underst
 
 ## What is ShipMode?
 
-ShipMode is an **AI-native development toolkit** that transforms any codebase into a self-driving software project. It reads your code, learns your conventions, and generates a complete AI crew that can:
+ShipMode is an **AI-native development toolkit** that transforms ideas and codebases into self-driving software projects. Whether you're starting from scratch or optimizing an existing project, ShipMode generates a complete AI crew that can:
 
 - 🔍 **Analyze** your tech stack, architecture, and patterns
 - 🧠 **Learn** your coding conventions and best practices
 - ✨ **Ship** features end-to-end with minimal human oversight
 - 🔄 **Iterate** continuously — planning, executing, testing, deploying
+
+## Two Ways to Ship
+
+### 🌱 Mode 1: Idea → Scaffold → Ship
+**Starting from zero?** ShipMode interviews you about your idea, proposes an optimal tech stack, scaffolds your initial project, then activates your AI crew to build it out.
+
+```bash
+npx shipmode init --from-idea
+```
+
+**The flow:**
+1. **Interview** — Answer 5-7 diagnostic questions about your idea
+2. **Stack Proposal** — Get a recommended tech stack based on your needs
+3. **Approval** — Accept or customize the proposed stack
+4. **Scaffold** — ShipMode generates your initial project structure
+5. **Activate** — AI crew takes over to build features autonomously
+
+### 🚀 Mode 2: Existing Codebase → Ship
+**Already have code?** ShipMode analyzes your existing project, learns your patterns, and immediately activates your AI crew.
+
+```bash
+npx shipmode init --from-code
+```
+
+**The flow:**
+1. **Analyze** — Deep scan of your codebase (languages, frameworks, patterns)
+2. **Generate** — Create SHIPMODE.md, skills/, and crew/ configuration
+3. **Activate** — AI crew starts shipping features in your style
 
 ---
 
@@ -37,6 +65,20 @@ Developer: "Still wrong. Let me just do it myself."
 
 ## The Solution
 
+**From Idea:**
+```
+Developer: "I want to build a marketplace for vintage watches"
+ShipMode: *Asks diagnostic questions*
+ShipMode: *Proposes: Next.js + tRPC + Prisma + Stripe*
+Developer: "Looks good!" ✓
+ShipMode: *Scaffolds project + generates crew*
+ShipMode: *Builds core features autonomously*
+Developer: *Reviews and ships*
+
+Time to first feature: 30 minutes
+```
+
+**From Code:**
 ```
 Developer: "Build a checkout flow with Stripe"
 ShipMode: *Analyzes codebase*
@@ -52,13 +94,24 @@ Sanity preserved: 100%
 
 ## How It Works
 
-### 1. Initialize
+### Initialize (Choose Your Path)
+
+**From Idea:**
 ```bash
-npx shipmode init
+npx shipmode init --from-idea
+```
+ShipMode interviews you, proposes a stack, scaffolds your project.
+
+**From Code:**
+```bash
+npx shipmode init --from-code
 ```
 ShipMode scans your codebase and builds a complete understanding of your stack.
 
-### 2. Generate
+### Generate
+
+After initialization, ShipMode creates your AI crew configuration:
+
 ```
 .shipmode/
 ├── SHIPMODE.md          # Your project's AI manifesto
@@ -72,7 +125,7 @@ ShipMode scans your codebase and builds a complete understanding of your stack.
     └── devops-engineer.md
 ```
 
-### 3. Ship
+### Ship
 ```bash
 npx shipmode run "Build a checkout flow with Stripe"
 ```
