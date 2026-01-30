@@ -2,34 +2,54 @@ import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
 import { analyzeCodebase } from '../core/analyzer.js';
-import { proposeStack } from '../core/stack-proposer.js';
-import { generateShipmodeConfig } from '../core/config-generator.js';
+import { generateShipmodeConfig as generateBasicConfig } from '../core/config-generator.js';
+import { LLMService } from '../llm/service.js';
+import { ConfigGenerator } from '../llm/generators.js';
 import { 
   showWelcome, 
   showSuccess, 
   showInfo, 
-  showStep,
   showDivider,
   showNextSteps,
   COLORS,
   ROCKET 
 } from '../utils/ui.js';
 import type { IdeaAnswers } from '../types/index.js';
+import type { SupportedProvider, TargetAgent } from '../llm/types.js';
 
 interface InitOptions {
   fromIdea?: boolean;
   fromCode?: boolean;
+  provider?: string;
+  model?: string;
+  target?: TargetAgent;
 }
 
 export async function initCommand(options: InitOptions): Promise<void> {
   showWelcome();
 
+  // Initialize LLM service
+  const llmService = new LLMService();
+  await llmService.initialize();
+
+  // Determine provider and model
+  let provider: SupportedProvider | undefined;
+  let model: string | undefined;
+  
+  if (options.provider) {
+    provider = options.provider as SupportedProvider;
+  }
+  
+  if (options.model) {
+    model = options.model;
+  }
+
   if (options.fromIdea) {
-    await initFromIdea();
+    await initFromIdea(llmService, provider, model);
   } else if (options.fromCode) {
-    await initFromCode();
+    await initFromCode(llmService, provider, model, options.target);
   } else {
-    // Interactive mode with nice UI
+    // Interactive mode
     const { mode } = await inquirer.prompt([
       {
         type: 'list',
@@ -51,14 +71,18 @@ export async function initCommand(options: InitOptions): Promise<void> {
     ]);
 
     if (mode === 'idea') {
-      await initFromIdea();
+      await initFromIdea(llmService, provider, model);
     } else {
-      await initFromCode();
+      await initFromCode(llmService, provider, model, options.target);
     }
   }
 }
 
-async function initFromIdea(): Promise<void> {
+async function initFromIdea(
+  llmService: LLMService,
+  provider?: SupportedProvider,
+  model?: string
+): Promise<void> {
   console.log(COLORS.bold('\n🌱  Starting from an Idea\n'));
   console.log(COLORS.muted("Let's understand what you're building...\n"));
 
@@ -141,83 +165,108 @@ async function initFromIdea(): Promise<void> {
 
   showDivider();
 
-  const spinner = ora({
-    text: COLORS.muted('Analyzing your requirements...'),
-    spinner: 'dots12',
-  }).start();
-  
-  try {
-    const proposal = await proposeStack(answers);
+  // Check if we should use LLM for stack proposal
+  const useLLM = !!provider || llmService.getConfigManager().getProviderConfig(
+    llmService.getDefaultProvider()
+  ).apiKey;
+
+  let proposal: { stack: string[]; rationale: string; alternatives: string[] };
+
+  if (useLLM) {
+    const spinner = ora({
+      text: COLORS.muted('Consulting AI for optimal stack...'),
+      spinner: 'dots12',
+    }).start();
+
+    try {
+      const adapter = await llmService.getAdapter(provider);
+      const generator = new ConfigGenerator(adapter);
+      proposal = await generator.generateStackProposal(answers);
+      spinner.succeed(COLORS.success('AI recommendation complete!'));
+    } catch (error) {
+      spinner.warn(COLORS.warning('AI unavailable, using rule-based fallback'));
+      // Fallback to rule-based
+      const { proposeStack } = await import('../core/stack-proposer.js');
+      proposal = await proposeStack(answers);
+    }
+  } else {
+    const spinner = ora({
+      text: COLORS.muted('Analyzing requirements...'),
+      spinner: 'dots12',
+    }).start();
+    
+    const { proposeStack } = await import('../core/stack-proposer.js');
+    proposal = await proposeStack(answers);
     spinner.succeed(COLORS.success('Analysis complete!'));
+  }
 
+  console.log();
+  console.log(COLORS.bold.cyan('📋  Proposed Tech Stack\n'));
+  
+  proposal.stack.forEach((tech, i) => {
+    const icon = getTechIcon(tech);
+    console.log(`  ${icon}  ${COLORS.bold(tech)}`);
+  });
+
+  console.log();
+  console.log(COLORS.muted('Why this stack?'));
+  console.log(`  ${proposal.rationale}`);
+  
+  if (proposal.alternatives.length > 0) {
     console.log();
-    console.log(COLORS.bold.cyan('📋  Proposed Tech Stack\n'));
+    console.log(COLORS.muted('Alternatives:'));
+    console.log(`  ${proposal.alternatives.join(', ')}`);
+  }
+
+  console.log();
+
+  const { approved } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'approved',
+      message: COLORS.primary('Does this stack look good?'),
+      default: true,
+    },
+  ]);
+
+  if (approved) {
+    const genSpinner = ora({
+      text: COLORS.muted('Generating ShipMode configuration...'),
+      spinner: 'dots',
+    }).start();
     
-    // Show stack in a nice format
-    proposal.stack.forEach((tech, i) => {
-      const icon = getTechIcon(tech);
-      console.log(`  ${icon}  ${COLORS.bold(tech)}`);
+    await generateBasicConfig({
+      mode: 'idea',
+      stack: proposal.stack,
+      idea: answers,
     });
-
-    console.log();
-    console.log(COLORS.muted('Why this stack?'));
-    console.log(`  ${proposal.rationale}`);
     
-    if (proposal.alternatives.length > 0) {
-      console.log();
-      console.log(COLORS.muted('Alternatives:'));
-      console.log(`  ${proposal.alternatives.join(', ')}`);
-    }
-
+    genSpinner.succeed(COLORS.success('ShipMode initialized!'));
+    
     console.log();
-
-    const { approved } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'approved',
-        message: COLORS.primary('Does this stack look good?'),
-        default: true,
-      },
+    console.log(ROCKET);
+    console.log();
+    
+    showSuccess('.shipmode/ directory created');
+    
+    showNextSteps([
+      COLORS.bold('Review ') + COLORS.muted('.shipmode/SHIPMODE.md'),
+      COLORS.bold('Run ') + COLORS.muted('shipmode run "Scaffold initial project"'),
+      COLORS.bold('Start building ') + COLORS.muted('your features'),
     ]);
-
-    if (approved) {
-      const genSpinner = ora({
-        text: COLORS.muted('Generating ShipMode configuration...'),
-        spinner: 'dots',
-      }).start();
-      
-      await generateShipmodeConfig({
-        mode: 'idea',
-        stack: proposal.stack,
-        idea: answers,
-      });
-      
-      genSpinner.succeed(COLORS.success('ShipMode initialized!'));
-      
-      console.log();
-      console.log(ROCKET);
-      console.log();
-      
-      showSuccess('.shipmode/ directory created');
-      
-      showNextSteps([
-        COLORS.bold('Review ') + COLORS.muted('.shipmode/SHIPMODE.md'),
-        COLORS.bold('Run ') + COLORS.muted('shipmode run "Scaffold initial project"'),
-        COLORS.bold('Start building ') + COLORS.muted('your features'),
-      ]);
-    } else {
-      console.log();
-      console.log(COLORS.warning('No problem! You can customize the stack later.'));
-      console.log(COLORS.muted('Run "shipmode init --from-idea" anytime to try again.'));
-    }
-  } catch (error) {
-    spinner.fail(COLORS.error('Analysis failed'));
-    console.error(error);
-    process.exit(1);
+  } else {
+    console.log();
+    console.log(COLORS.warning('No problem! You can customize the stack later.'));
+    console.log(COLORS.muted('Run "shipmode init --from-idea" anytime to try again.'));
   }
 }
 
-async function initFromCode(): Promise<void> {
+async function initFromCode(
+  llmService: LLMService,
+  provider?: SupportedProvider,
+  model?: string,
+  target: TargetAgent = 'claude'
+): Promise<void> {
   console.log(COLORS.bold('\n🚀  Analyzing Your Codebase\n'));
 
   const spinner = ora({
@@ -254,7 +303,6 @@ async function initFromCode(): Promise<void> {
 
     console.log();
 
-    // Interactive validation - key feature for world-class UX
     const { confirmed } = await inquirer.prompt([
       {
         type: 'confirm',
@@ -272,17 +320,80 @@ async function initFromCode(): Promise<void> {
 
     showDivider();
 
+    // Check if we should use LLM for enhanced generation
+    const useLLM = !!provider || llmService.getConfigManager().getProviderConfig(
+      llmService.getDefaultProvider()
+    ).apiKey;
+
     const genSpinner = ora({
-      text: COLORS.muted('Generating AI crew configuration...'),
+      text: useLLM 
+        ? COLORS.muted(`Generating AI-enhanced configuration via ${provider || llmService.getDefaultProvider()}...`)
+        : COLORS.muted('Generating configuration...'),
       spinner: 'dots',
     }).start();
     
-    await generateShipmodeConfig({
-      mode: 'code',
-      profile,
-    });
-    
-    genSpinner.succeed(COLORS.success('ShipMode initialized!'));
+    if (useLLM) {
+      try {
+        const adapter = await llmService.getAdapter(provider);
+        const generator = new ConfigGenerator(adapter);
+        
+        // Generate based on target agent
+        let generated;
+        switch (target) {
+          case 'codex':
+            generated = await generator.generateForCodex(profile);
+            break;
+          case 'claude':
+          default:
+            generated = await generator.generateForClaudeCode(profile);
+            break;
+        }
+        
+        // Write generated files
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        
+        for (const file of generated.files) {
+          const filePath = path.default.join('.shipmode', file.path);
+          await fs.default.mkdir(path.default.dirname(filePath), { recursive: true });
+          await fs.default.writeFile(filePath, file.content);
+        }
+        
+        // Also generate basic skills
+        for (const framework of profile.frameworks.slice(0, 3)) {
+          // Find code samples for this framework
+          const { glob } = await import('fast-glob');
+          const samples = await glob(`**/*.{ts,tsx,js,jsx}`, { 
+            cwd: process.cwd(),
+            absolute: false,
+          });
+          
+          const codeSamples: string[] = [];
+          for (const sample of samples.slice(0, 2)) {
+            try {
+              const content = await fs.default.readFile(sample, 'utf-8');
+              codeSamples.push(content.slice(0, 2000));
+            } catch {
+              // Skip files we can't read
+            }
+          }
+          
+          if (codeSamples.length > 0) {
+            const skillContent = await generator.generateSkill(framework, codeSamples, profile);
+            const skillPath = path.default.join('.shipmode', 'skills', `${framework.toLowerCase().replace(/[^a-z]/g, '-')}.md`);
+            await fs.default.writeFile(skillPath, skillContent);
+          }
+        }
+        
+        genSpinner.succeed(COLORS.success('AI-enhanced configuration generated!'));
+      } catch (error) {
+        genSpinner.warn(COLORS.warning('AI generation failed, using fallback'));
+        await generateBasicConfig({ mode: 'code', profile });
+      }
+    } else {
+      await generateBasicConfig({ mode: 'code', profile });
+      genSpinner.succeed(COLORS.success('ShipMode initialized!'));
+    }
 
     console.log();
     console.log(ROCKET);
@@ -292,12 +403,12 @@ async function initFromCode(): Promise<void> {
     
     console.log();
     console.log(COLORS.muted('Generated files:'));
-    console.log(`  ${COLORS.gray('→')} .shipmode/SHIPMODE.md`);
+    console.log(`  ${COLORS.gray('→')} .shipmode/${target === 'codex' ? 'CODEX.md' : 'SHIPMODE.md'}`);
     console.log(`  ${COLORS.gray('→')} .shipmode/skills/*.md (${profile.frameworks.length} skills)`);
     console.log(`  ${COLORS.gray('→')} .shipmode/crew/*.md (3 crew agents)`);
 
     showNextSteps([
-      COLORS.bold('Review ') + COLORS.muted('.shipmode/SHIPMODE.md'),
+      COLORS.bold('Review ') + COLORS.muted(`.shipmode/${target === 'codex' ? 'CODEX.md' : 'SHIPMODE.md'}`),
       COLORS.bold('Customize ') + COLORS.muted('skills in .shipmode/skills/'),
       COLORS.bold('Run ') + COLORS.muted('shipmode run "Your task here"'),
     ]);
