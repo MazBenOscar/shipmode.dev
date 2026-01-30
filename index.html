@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShipMode.dev — Get in Ship Mode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg-secondary: #12121a;
+            --text: #e8e8f0;
+            --text-muted: #6b6b7b;
+            --accent-cyan: #00f0ff;
+            --accent-pink: #ff00a0;
+            --accent-purple: #a855f7;
+            --border: #1e1e2e;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15) 0px,
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Grid background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Floating orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--accent-cyan);
+            top: -200px;
+            right: -100px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: var(--accent-pink);
+            bottom: -100px;
+            left: -100px;
+            animation: float 15s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, -30px); }
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Navigation */
+        nav {
+            padding: 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo::before {
+            content: '▶';
+            color: var(--accent-cyan);
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-cyan);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 100px 0 60px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 100px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            margin-bottom: 32px;
+        }
+
+        .badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 48px;
+            line-height: 1.6;
+        }
+
+        /* Waitlist Form */
+        .waitlist-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 480px;
+            margin: 0 auto 32px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        input[type="email"] {
+            flex: 1;
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="email"]:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        input[type="email"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        button {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none;
+            border-radius: 8px;
+            color: var(--bg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 240, 255, 0.3);
+        }
+
+        .trust-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Feature Cards */
+        .features {
+            padding: 80px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            padding: 32px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* Terminal Window */
+        .terminal {
+            max-width: 800px;
+            margin: 60px auto;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-body {
+            padding: 24px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            margin-bottom: 8px;
+        }
+
+        .terminal-prompt {
+            color: var(--accent-cyan);
+        }
+
+        .terminal-command {
+            color: var(--text);
+        }
+
+        .terminal-output {
+            color: var(--text-muted);
+            margin-left: 24px;
+        }
+
+        .terminal-success {
+            color: var(--accent-purple);
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            margin-top: 60px;
+        }
+
+        footer p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .input-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="container">
+        <nav>
+            <a href="#" class="logo">ShipMode</a>
+            <div class="nav-links">
+                <a href="https://github.com/MazBenOscar/shipmode.dev" target="_blank">GitHub</a>
+                <a href="#features">Features</a>
+            </div>
+        </nav>
+
+        <section class="hero">
+            <div class="badge">EARLY ACCESS</div>
+            <h1>
+                Get in<br>
+                <span class="gradient-text">Ship Mode</span>
+            </h1>
+            <p class="hero-subtitle">
+                Your codebase's autopilot. From idea to production, ShipMode generates an AI crew that understands your stack and ships features while you focus on what matters.
+            </p>
+
+            <form class="waitlist-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+                <div class="input-group">
+                    <input type="email" name="email" placeholder="Enter your email" required>
+                    <button type="submit">Join Waitlist</button>
+                </div>
+                <p class="trust-text">No spam. Unsubscribe anytime. Launching Q2 2025.</p>
+            </form>
+        </section>
+
+        <section class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dot red"></div>
+                <div class="terminal-dot yellow"></div>
+                <div class="terminal-dot green"></div>
+            </div>
+            <div class="terminal-body">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-command">shipmode init --from-idea</span>
+                </div>
+                <div class="terminal-line terminal-output">✓ Analyzing your requirements...</div>
+                <div class="terminal-line terminal-output">✓ Proposed stack: Next.js + tRPC + Prisma + Stripe</div>
+                <div class="terminal-line terminal-output">✓ Scaffolding project...</div>
+                <div class="terminal-line terminal-output">✓ AI crew activated</div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-command">shipmode run "Build checkout flow"</span>
+                </div>
+                <div class="terminal-line terminal-output">✓ Planning implementation...</div>
+                <div class="terminal-line terminal-output">✓ Writing code...</div>
+                <div class="terminal-line terminal-output">✓ Tests passing</div>
+                <div class="terminal-line terminal-success">✓ PR opened: #42 - Add checkout flow with Stripe</div>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <div class="feature-card">
+                <div class="feature-icon">🌱</div>
+                <h3>Idea → Ship</h3>
+                <p>Starting from scratch? Answer a few questions, get a proposed tech stack, and watch your AI crew scaffold and build your entire project.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>Codebase → Ship</h3>
+                <p>Already have code? ShipMode analyzes your existing project, learns your patterns, and activates an AI crew that writes code your way.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <h3>AI Crew</h3>
+                <p>Specialized agents for frontend, backend, DevOps — each knowing your conventions and ready to plan, code, test, and deploy.</p>
+            </div>
+        </section>
+
+        <footer>
+            <p>Built with ❤️ by developers tired of explaining their stack to AI</p>
+            <p style="margin-top: 8px;"><a href="https://github.com/MazBenOscar/shipmode.dev">GitHub</a> · <a href="#">Twitter</a> · <a href="#">Discord</a></p>
+        </footer>
+    </div>
+
+    <!-- Replace YOUR_FORM_ID with your Formspree form ID -->
+    <script>
+        // Simple form handling
+        const form = document.querySelector('.waitlist-form');
+        form.addEventListener('submit', (e) => {
+            // You can add custom handling here
+            // For now, it submits to Formspree
+        });
+    </script>
+</body>
+</html>
