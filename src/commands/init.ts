@@ -297,7 +297,7 @@ async function initFromCode(
       console.log();
       console.log(COLORS.muted('Entry Points:'));
       profile.entryPoints.slice(0, 3).forEach(ep => {
-        console.log(`  ${COLORS.gray('→')} ${ep}`);
+        console.log(`  ${COLORS.muted('→')} ${ep}`);
       });
     }
 
