@@ -1,14 +1,16 @@
 {
-  "name": "@shipmode/monorepo",
+  "name": "shipmode-dev",
   "version": "1.0.0",
   "private": true,
+  "description": "ShipMode - AI agent framework scaffolding tool",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces",
-    "lint": "npm run lint --workspaces"
+    "build": "cd packages/shipmode && npm run build",
+    "dev": "cd packages/shipmode && npm run dev",
+    "test": "cd packages/shipmode && npm test",
+    "install:all": "npm install && cd packages/shipmode && npm install"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

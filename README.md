@@ -1,104 +1,56 @@
-# ShipMode Framework
+# ShipMode
 
-A dual-flow AI agent framework for both existing projects and fresh starts.
+AI agent framework scaffolding tool. Ship your AI projects faster.
 
-## 📦 Package Structure
+## Installation
 
-```
-shipmode/
-├── packages/
-│   ├── core/           @shipmode/core     → Core framework functions
-│   ├── cli/            @shipmode/cli      → CLI tool (integrate mode)
-│   ├── create/         @shipmode/create   → Starter kit (fresh mode)
-│   └── templates/      @shipmode/templates → Scaffold templates
-├── api/
-│   ├── stripe/
-│   │   └── webhook.ts  → Stripe payment webhook handler
-│   └── github/
-│       └── invite.ts   → GitHub invite API
-├── src/
-│   ├── lib/
-│   ├── types/
-│   └── utils/
-└── package.json       → Monorepo root
+```bash
+npm install -g shipmode
 ```
 
-## 🚀 Installation
+## Quick Start
 
-### For Existing Projects
+### Create a new project
+```bash
+shipmode create my-ai-app --template starter
+cd my-ai-app
+npm install
+npm run dev "Hello, world!"
+```
 
+### Add to existing project
 ```bash
 cd my-existing-project
-npm install @shipmode/core @shipmode/cli
-npx shipmode init --template api --template auth --template db
-```
-
-### For Fresh Projects
-
-```bash
-npm create @shipmode/app@latest
-# Follow interactive prompts
-```
-
-## 💳 Payment Flow
-
-```
-User pays on shipmode.dev
-        ↓
-Stripe webhook validates payment
-        ↓
-GitHub API adds user to private repo
-        ↓
-User receives GitHub invite
-        ↓
-User clones repo OR runs create command
-```
-
-## 🔧 Environment Variables
-
-```bash
-# Stripe
-STRIPE_WEBHOOK_SECRET=sk_test_...
-
-# GitHub
-GITHUB_TOKEN=ghp_...
-GITHUB_ORG=shipmode
-GITHUB_REPO=framework
-
-# Security
-WEBHOOK_SECRET=your-secret
-```
-
-## 📝 API Endpoints
-
-### Stripe Webhook
-`POST /api/stripe/webhook`
-- Receives payment events
-- Triggers GitHub invite
-
-### GitHub Invite
-`GET /api/github/invite?email=user@example.com`
-- Check invite status
-
-`POST /api/github/invite`
-- Send invite to email
-
-## 🛠️ Development
-
-```bash
-# Install dependencies
+shipmode init --template minimal
 npm install
-
-# Build all packages
-npm run build
-
-# Run tests
-npm run test
-
-# Link CLI locally
-cd packages/cli && npm run link
+npm run agent "Your prompt here"
 ```
 
-## 📄 License
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `shipmode create <name>` | Create new project from template |
+| `shipmode init` | Add ShipMode to existing project |
+| `shipmode templates` | List available templates |
+| `shipmode access` | Check your access status |
+
+## Templates
+
+- **starter** - Minimal AI agent with OpenAI
+- **agent** - Agent with tools and structured output
+- **minimal** (init) - Add AI to existing project
+
+## Pricing
+
+$49 one-time payment for full access to all templates and future updates.
+
+Visit https://shipmode.dev to purchase.
+
+## Documentation
+
+Full documentation at https://shipmode.dev/docs
+
+## License
 
 MIT
