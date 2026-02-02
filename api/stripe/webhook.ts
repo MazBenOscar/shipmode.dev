@@ -1,162 +1,215 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-// Configuration (from environment variables)
+// Configuration
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const GITHUB_ORG = process.env.GITHUB_ORG || 'shipmode';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'framework';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 
-interface StripeEvent {
-  id: string;
-  type: string;
-  data: {
-    object: {
-      customer_email?: string;
-      metadata?: {
-        email?: string;
-      };
-      subscription?: {
-        customer_email?: string;
-      };
-    };
-  };
-}
-
-interface GitHubInviteResponse {
-  id: number;
-  node_id: string;
-  login: string;
-}
+// Stripe webhook event types we care about
+type StripeEventType = 'checkout.session.completed' | 'payment_intent.succeeded';
 
 // Verify Stripe webhook signature
-function verifyStripeSignature(
-  payload: string,
-  signature: string
-): StripeEvent | null {
+function verifyStripeSignature(payload: string, signature: string): { valid: boolean; event?: any } {
   try {
-    const event = crypto
-      .createHmac('sha256', STRIPE_WEBHOOK_SECRET)
-      .update(payload)
-      .digest('hex');
-
-    const signedPayload = `${event.id}${event.type}${event.data.object.id}`;
-
-    const expectedSignature = crypto
-      .createHmac('sha256', STRIPE_WEBHOOK_SECRET)
-      .update(payload)
-      .digest('hex');
-
-    if (signature !== expectedSignature) {
-      return null;
+    // Stripe sends the signature in the format: t=timestamp,v1=signature
+    const elements = signature.split(',');
+    const tElement = elements.find(e => e.startsWith('t='));
+    const v1Element = elements.find(e => e.startsWith('v1='));
+    
+    if (!tElement || !v1Element) {
+      return { valid: false };
     }
-
-    return event as unknown as StripeEvent;
+    
+    const timestamp = tElement.replace('t=', '');
+    const sig = v1Element.replace('v1=', '');
+    
+    // Compute expected signature
+    const signedPayload = `${timestamp}.${payload}`;
+    const expectedSig = crypto
+      .createHmac('sha256', STRIPE_WEBHOOK_SECRET)
+      .update(signedPayload)
+      .digest('hex');
+    
+    // Use timing-safe comparison
+    const sigBuffer = Buffer.from(sig);
+    const expectedBuffer = Buffer.from(expectedSig);
+    
+    if (sigBuffer.length !== expectedBuffer.length) {
+      return { valid: false };
+    }
+    
+    if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+      return { valid: false };
+    }
+    
+    // Parse the event
+    const event = JSON.parse(payload);
+    return { valid: true, event };
   } catch (error) {
-    console.error('Signature verification failed:', error);
+    console.error('Stripe signature verification error:', error);
+    return { valid: false };
+  }
+}
+
+// Verify ShipMode internal signature for GitHub API calls
+function verifyShipModeSignature(payload: string, signature: string | null): boolean {
+  if (!signature) return false;
+  
+  const expected = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+  
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expected)
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Get GitHub user ID from username
+async function getGitHubUserId(username: string): Promise<number | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/users/${encodeURIComponent(username)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      }
+    );
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    return data.id;
+  } catch {
     return null;
   }
 }
 
-// Invite user to GitHub repo
-async function inviteUserToGitHub(email: string): Promise<GitHubInviteResponse | null> {
+// Invite user to GitHub repository
+async function inviteToGitHub(
+  username: string,
+  permission: 'pull' | 'push' | 'admin' = 'pull'
+): Promise<{ success: boolean; message: string }> {
   try {
+    const userId = await getGitHubUserId(username);
+    
+    if (!userId) {
+      return { success: false, message: `GitHub user "${username}" not found` };
+    }
+    
+    // Use repository invitations API
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/collaborators/${email}`,
+      `https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/invitations`,
       {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          permission: 'read',
-          invitee_id: undefined, // GitHub will lookup by email
+        body: JSON.stringify({ 
+          invitee_id: userId,
+          permission,
         }),
       }
     );
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('GitHub invite failed:', error);
-      return null;
+    
+    if (response.status === 201) {
+      return { 
+        success: true, 
+        message: `GitHub invite sent to @${username}. Check your GitHub email.`
+      };
     }
-
-    return await response.json();
+    
+    if (response.status === 422) {
+      // User might already have access
+      return { 
+        success: true, 
+        message: `@${username} already has access to the repository.`
+      };
+    }
+    
+    const error = await response.text();
+    console.error('GitHub invite error:', error);
+    return { success: false, message: 'Failed to send GitHub invite' };
   } catch (error) {
     console.error('GitHub invite error:', error);
-    return null;
-  }
-}
-
-// Handle checkout.session.completed event
-async function handleCheckoutComplete(event: StripeEvent): Promise<void> {
-  const email = 
-    event.data.object.customer_email ||
-    event.data.object.metadata?.email ||
-    event.data.object.subscription?.customer_email;
-
-  if (!email) {
-    console.error('No email found in payment event');
-    return;
-  }
-
-  console.log(`Processing payment for: ${email}`);
-
-  const invite = await inviteUserToGitHub(email);
-  
-  if (invite) {
-    console.log(`✅ Successfully invited ${email} to GitHub repo`);
-  } else {
-    console.error(`❌ Failed to invite ${email}`);
+    return { success: false, message: 'Internal server error' };
   }
 }
 
 // Main webhook handler
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text();
+    const payload = await request.text();
     const signature = request.headers.get('stripe-signature');
-
+    
     if (!signature) {
       return NextResponse.json(
-        { error: 'Missing stripe-signature header' },
+        { error: 'Missing Stripe signature' },
         { status: 400 }
       );
     }
-
-    const event = verifyStripeSignature(body, signature);
-
-    if (!event) {
+    
+    // Verify Stripe signature
+    const { valid, event } = verifyStripeSignature(payload, signature);
+    
+    if (!valid) {
+      console.error('Invalid Stripe signature');
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
       );
     }
-
-    console.log(`Received Stripe event: ${event.type}`);
-
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutComplete(event);
-        break;
+    
+    // Handle the event
+    const eventType = event.type as StripeEventType;
+    
+    if (eventType === 'checkout.session.completed' || eventType === 'payment_intent.succeeded') {
+      const session = event.data.object;
       
-      case 'invoice.payment_succeeded':
-        // Handle subscription renewals if applicable
-        console.log('Subscription payment succeeded');
-        break;
+      // Extract customer info
+      const customerEmail = session.customer_email || 
+        session.metadata?.email ||
+        session.customer_details?.email;
       
-      case 'customer.subscription.deleted':
-        // Handle subscription cancellation
-        console.log('Subscription cancelled');
-        break;
+      const username = session.metadata?.github_username || 
+        session.customer_details?.name?.toLowerCase().replace(/\s+/g, '-');
       
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+      if (!customerEmail || !username) {
+        console.error('Missing customer info:', { customerEmail, username });
+        return NextResponse.json(
+          { error: 'Missing customer information' },
+          { status: 400 }
+        );
+      }
+      
+      // Send GitHub invite
+      const inviteResult = await inviteToGitHub(username, 'pull');
+      
+      console.log(`Processed payment for ${customerEmail}, invite result: ${inviteResult.message}`);
+      
+      return NextResponse.json({
+        received: true,
+        customer_email: customerEmail,
+        github_username: username,
+        invite_status: inviteResult.success ? 'sent' : 'failed',
+        message: inviteResult.message,
+      });
     }
-
-    return NextResponse.json({ received: true });
+    
+    // Ignore other event types
+    return NextResponse.json({ received: true, ignored: eventType });
   } catch (error) {
     console.error('Webhook error:', error);
     return NextResponse.json(

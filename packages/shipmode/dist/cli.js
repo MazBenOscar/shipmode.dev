@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 import { program } from 'commander';
 import chalk from 'chalk';
+import { readFileSync } from 'fs';
 import { createProject } from './commands/create.js';
 import { initProject } from './commands/init.js';
 import { listTemplates } from './commands/templates.js';
 import { showAccess } from './commands/access.js';
-const pkg = {
-    version: '1.0.0',
-    description: 'AI agent framework scaffolding tool'
-};
+import { login } from './commands/login.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pkgPath = path.join(__dirname, '..', 'package.json');
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 program
     .name('shipmode')
     .description(pkg.description)
@@ -51,6 +54,12 @@ program
     .description('Check your ShipMode access status')
     .action(async () => {
     await showAccess();
+});
+program
+    .command('login')
+    .description('Login with your purchase credentials')
+    .action(async () => {
+    await login();
 });
 program.parse();
 //# sourceMappingURL=cli.js.map

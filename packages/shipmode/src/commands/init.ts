@@ -1,8 +1,9 @@
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const TEMPLATES_DIR = new URL('../../templates', import.meta.url).pathname;
+const TEMPLATES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates');
 
 export async function initProject(templateName: string): Promise<void> {
   console.log(chalk.blue('🔧 Initializing ShipMode in existing project...'));

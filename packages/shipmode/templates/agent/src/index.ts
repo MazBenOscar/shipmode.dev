@@ -27,17 +27,20 @@ const weatherTool = tool({
 });
 
 const calculatorTool = tool({
-  description: 'Perform calculations',
+  description: 'Perform basic math calculations (+, -, *, /)',
   parameters: z.object({
-    expression: z.string().describe('Math expression to evaluate'),
+    a: z.number().describe('First number'),
+    b: z.number().describe('Second number'),
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']).describe('Operation to perform'),
   }),
-  execute: async ({ expression }) => {
-    try {
-      // Safe evaluation for demo - use a proper math library in production
-      const result = Function('"use strict"; return (' + expression + ')')();
-      return { result, expression };
-    } catch {
-      return { error: 'Invalid expression', expression };
+  execute: async ({ a, b, operation }) => {
+    switch (operation) {
+      case 'add': return { result: a + b };
+      case 'subtract': return { result: a - b };
+      case 'multiply': return { result: a * b };
+      case 'divide': 
+        if (b === 0) return { error: 'Cannot divide by zero' };
+        return { result: a / b };
     }
   },
 });

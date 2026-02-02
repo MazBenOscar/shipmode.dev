@@ -7,144 +7,151 @@ const GITHUB_ORG = process.env.GITHUB_ORG || 'shipmode';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'framework';
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 
-// Verify request authenticity
-function verifyRequest(
-  payload: string,
-  signature: string
-): boolean {
+// Verify request authenticity using HMAC-SHA256
+function verifyRequest(payload: string, signature: string | null): boolean {
+  if (!signature) return false;
+  
   const expected = crypto
     .createHmac('sha256', WEBHOOK_SECRET)
     .update(payload)
     .digest('hex');
   
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expected)
+    );
+  } catch {
+    return false;
+  }
 }
 
 // Invite user to GitHub repository
 async function inviteUser(
-  email: string,
+  username: string,
   permission: 'pull' | 'push' | 'admin' = 'pull'
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; data?: any }> {
   try {
-    // First, check if user exists on GitHub by email
-    const searchResponse = await fetch(
-      `https://api.github.com/search/users?q=${encodeURIComponent(email)}+in:email`,
-      {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
-
-    if (!searchResponse.ok) {
-      return { success: false, message: 'Failed to search for GitHub user' };
-    }
-
-    const searchData = await searchResponse.json();
-    
-    if (searchData.total_count === 0) {
-      return { 
-        success: false, 
-        message: 'GitHub account not found. Please sign up for GitHub first.' 
-      };
-    }
-
-    const githubUsername = searchData.items[0].login;
-
-    // Send invitation
+    // Use GitHub's repository invitation API
+    // This sends an email invitation to the user
     const inviteResponse = await fetch(
-      `https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/collaborators/${githubUsername}`,
+      `https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/invitations`,
       {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ permission }),
+        body: JSON.stringify({ 
+          invitee_id: await getUserId(username),
+          permission,
+        }),
       }
     );
 
-    if (!inviteResponse.ok) {
-      const error = await inviteResponse.text();
-      console.error('GitHub invite error:', error);
-      return { success: false, message: 'Failed to send GitHub invite' };
+    if (inviteResponse.status === 201) {
+      return { 
+        success: true, 
+        message: `Invite sent to ${username}. Check your GitHub email.`,
+        data: { username }
+      };
     }
 
-    const inviteData = await inviteResponse.json();
-    
-    return {
-      success: true,
-      message: `Invite sent to ${githubUsername}. Check your GitHub notifications.`,
-      data: {
-        invite_url: inviteData.html_url,
-        username: githubUsername,
-      },
-    };
+    if (inviteResponse.status === 422) {
+      // User might already be a collaborator
+      return { 
+        success: true, 
+        message: `${username} already has access to the repository.`,
+        data: { username }
+      };
+    }
+
+    const error = await inviteResponse.text();
+    console.error('GitHub invite error:', error);
+    return { success: false, message: 'Failed to send GitHub invite' };
   } catch (error) {
     console.error('GitHub invite error:', error);
     return { success: false, message: 'Internal server error' };
   }
 }
 
-// GET: Check invite status
+// Get GitHub user ID from username
+async function getUserId(username: string): Promise<number | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/users/${encodeURIComponent(username)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      }
+    );
+
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    return data.id;
+  } catch {
+    return null;
+  }
+}
+
+// Check if user is already a collaborator
+async function checkCollaborator(username: string): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/collaborators/${encodeURIComponent(username)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      }
+    );
+    return response.status === 204;
+  } catch {
+    return false;
+  }
+}
+
+// GET: Check invite status (requires signature)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email');
+  const username = searchParams.get('username');
   const signature = request.headers.get('x-shipmode-signature');
 
-  if (!email) {
+  // Verify signature
+  const payload = `GET:${username || ''}`;
+  if (!verifyRequest(payload, signature)) {
     return NextResponse.json(
-      { error: 'Email required' },
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  if (!username) {
+    return NextResponse.json(
+      { error: 'Username required' },
       { status: 400 }
     );
   }
 
   try {
-    // Search for user
-    const searchResponse = await fetch(
-      `https://api.github.com/search/users?q=${encodeURIComponent(email)}+in:email`,
-      {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
-
-    if (!searchResponse.ok) {
-      return NextResponse.json(
-        { error: 'GitHub API error' },
-        { status: 500 }
-      );
-    }
-
-    const searchData = await searchResponse.json();
-    
-    if (searchData.total_count === 0) {
+    // Check if user exists
+    const userId = await getUserId(username);
+    if (!userId) {
       return NextResponse.json({
         status: 'not_found',
-        message: 'No GitHub account linked to this email',
-      });
+        message: 'GitHub user not found',
+      }, { status: 404 });
     }
 
     // Check if already a collaborator
-    const username = searchData.items[0].login;
-    const collabResponse = await fetch(
-      `https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/collaborators/${username}`,
-      {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
-
-    if (collabResponse.ok) {
+    const isCollaborator = await checkCollaborator(username);
+    
+    if (isCollaborator) {
       return NextResponse.json({
         status: 'active',
         message: 'You have access to the ShipMode framework',
@@ -156,11 +163,9 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      status: 'invited',
-      message: 'Invite pending. Check your GitHub notifications.',
-      data: {
-        username,
-      },
+      status: 'pending',
+      message: 'Invite pending. Check your GitHub email.',
+      data: { username },
     });
   } catch (error) {
     console.error('Status check error:', error);
@@ -171,20 +176,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Send invite
+// POST: Send invite (requires signature)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, permission = 'pull' } = body;
-
-    if (!email) {
+    const body = await request.text();
+    const signature = request.headers.get('x-shipmode-signature');
+    
+    // Verify signature
+    if (!verifyRequest(body, signature)) {
       return NextResponse.json(
-        { error: 'Email required' },
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const data = JSON.parse(body);
+    const { username, permission = 'pull' } = data;
+
+    if (!username) {
+      return NextResponse.json(
+        { error: 'Username required' },
         { status: 400 }
       );
     }
 
-    const result = await inviteUser(email, permission);
+    // Validate permission
+    if (!['pull', 'push', 'admin'].includes(permission)) {
+      return NextResponse.json(
+        { error: 'Invalid permission. Use: pull, push, or admin' },
+        { status: 400 }
+      );
+    }
+
+    const result = await inviteUser(username, permission);
     
     if (!result.success) {
       return NextResponse.json(
